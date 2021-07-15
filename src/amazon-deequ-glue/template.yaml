@@ -1,0 +1,641 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Data Quality with Deequ on AWS Glue
+
+Parameters:
+  pArtifactsBucket:
+    Description: The name of the artifacts bucket
+    Type: String
+  pCreateFrontEnd:
+    Description: Set to true to create an AWS Amplify web UI
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
+  pEnv:
+    Description: The environment name
+    Type: String
+    Default: dev
+
+Globals:
+  Function:
+    Runtime: python3.7
+    Handler: lambda_function.lambda_handler
+
+Conditions:
+  EnableFrontEnd: !Equals [!Ref pCreateFrontEnd, "true"]
+  DisableFrontEnd: !Equals [!Ref pCreateFrontEnd, "false"]
+
+Resources:
+  AmplifyDevBranch:
+    Type: AWS::Amplify::Branch
+    Condition: EnableFrontEnd
+    Properties:
+      BranchName: !Ref pEnv
+      AppId: !GetAtt AmplifyApp.AppId
+      EnableAutoBuild: yes
+
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Condition: EnableFrontEnd
+    Properties:
+      Name: deequ-constraints
+      Repository: !Sub https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/amazon-deequ-glue
+      Description: Deequ - Data Quality Constraints
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
+      BuildSpec: |
+        version: 0.1
+        backend:
+          phases:
+            preBuild:
+              commands:
+                - cd src/deequ-constraints
+                - npm install -g @aws-amplify/cli
+            build:
+              commands:
+                - amplifyPush --simple
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - yarn install
+            build:
+              commands:
+                - yarn run build
+          artifacts:
+            baseDirectory: src/deequ-constraints/build
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - src/deequ-constraints/node_modules/**/*
+
+  ######## EVENTS #########
+  rDataQualityTriggerEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Trigger Data Quality Step Function every 30 minutes
+      State: DISABLED
+      ScheduleExpression: "cron(*/30 * * * ? *)"
+      Targets:
+        - Id: data-quality-event-rule
+          Arn: !Ref rDataQualityStateMachine
+          RoleArn: !GetAtt rEventTriggerRole.Arn
+          Input: |
+            {
+              "glueDatabase": "default",
+              "glueTables": "table1,table2"
+            }
+
+  ####### S3 #########
+  rDataQualityBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub data-quality-${AWS::Region}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  ######## IAM #########
+  AmplifyServiceRole:
+    Type: AWS::IAM::Role
+    Condition: EnableFrontEnd
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - amplify.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "amplify-console-role"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:CreateStackSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStackSet
+                  - cloudformation:DescribeStackSetOperation
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:GetTemplate
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:UpdateStack
+                  - cloudformation:UpdateStackSet
+                  - cloudformation:ValidateTemplate
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:CreatePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:CreateRole
+                  - iam:CreateServiceLinkedRole
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:ListPolicies
+                  - iam:ListPolicyVersions
+                  - iam:ListRolePolicies
+                  - iam:ListRoles
+                  - iam:PassRole
+                  - iam:PutGroupPolicy
+                  - iam:PutRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:UpdateRole
+                  - iam:UpdateRoleDescription
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutBucketAcl
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketVersioning
+                  - s3:PutBucketWebsite
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - dynamodb:CreateTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:UpdateTable
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - cognito-identity:CreateIdentityPool
+                  - cognito-identity:DescribeIdentity
+                  - cognito-identity:DescribeIdentityPool
+                  - cognito-identity:SetIdentityPoolRoles
+                  - cognito-identity:UpdateIdentityPool
+                  - cognito-idp:CreateGroup
+                  - cognito-idp:CreateUserPool
+                  - cognito-idp:CreateUserPoolClient
+                  - cognito-idp:DescribeUserPool
+                  - cognito-idp:UpdateUserPool
+                  - cognito-idp:UpdateUserPoolClient
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - codecommit:GitPull
+                  - codecommit:GetRepository
+                  - codecommit:GetRepositoryTriggers
+                  - codecommit:PutRepositoryTriggers
+              - Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
+                Effect: Allow
+                Action:
+                  - ssm:AddTagsToResource
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:DeleteParameter
+                  - ssm:DeleteParameters
+                  - ssm:ListTagsForResource
+                  - ssm:PutParameter
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                  - lambda:CreateEventSourceMapping
+                  - lambda:CreateFunction
+                  - lambda:GetEventSourceMapping
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:ListEventSourceMappings
+                  - lambda:ListFunctions
+                  - lambda:ListTags
+                  - lambda:InvokeFunction
+                  - lambda:TagResource
+                  - lambda:UpdateEventSourceMapping
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - amplify:CreateBackendEnvironment
+                  - amplify:GetApp
+                  - amplify:GetBackendEnvironment
+                  - amplify:ListApps
+                  - amplify:TagResource
+                  - amplify:UntagResource
+                  - amplify:UpdateApp
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - appsync:CreateDataSource
+                  - appsync:CreateGraphqlApi
+                  - appsync:CreateResolver
+                  - appsync:GetGraphqlApi
+                  - appsync:GetSchemaCreationStatus
+                  - appsync:StartSchemaCreation
+                  - appsync:UpdateDataSource
+                  - appsync:UpdateGraphqlApi
+                  - appsync:UpdateResolver
+                  - appsync:TagResource
+
+  rCommonIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/glue/*
+          - Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+              - dynamodb:DeleteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/DataQuality*
+
+  rGlueJobsIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - !Ref rCommonIAMPolicy
+      Policies:
+        - PolicyName: data-quality-jobs
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
+
+  rGlueCrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - !Ref rCommonIAMPolicy
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: data-quality-crawl
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:StartCrawler
+                Resource:
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${rGlueCrawler}
+
+  rStatesExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: data-quality-states-execution
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt rGlueCrawlerLambdaFunction.Arn
+              - Effect: Allow
+                Action:
+                  - glue:StartJobRun
+                  - glue:GetJobRun*
+                Resource:
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${rControllerGlueJob}
+
+  rEventTriggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: data-quality-trigger
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref rDataQualityStateMachine
+
+  ####### DYNAMODB #########
+  rDataQualitySuggestionsDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Condition: DisableFrontEnd
+    Properties:
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: tableHashKey
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: table-index
+          KeySchema:
+            - AttributeName: tableHashKey
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TableName: !Sub DataQualitySuggestion-${pEnv}
+
+  rDataQualityAnalysisDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Condition: DisableFrontEnd
+    Properties:
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: tableHashKey
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: table-index
+          KeySchema:
+            - AttributeName: tableHashKey
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TableName: !Sub DataQualityAnalyzer-${pEnv}
+
+  ######## LAMBDA #########
+  rGlueCrawlerLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./main/utils/crawl-data/src
+      FunctionName: data-quality-crawl-data
+      Description: Glue crawler
+      Environment:
+        Variables:
+          GLUE_CRAWLER: !Ref rGlueCrawler
+      MemorySize: 256
+      Timeout: 120
+      Role: !GetAtt rGlueCrawlerRole.Arn
+
+  ######## STEP FUNCTIONS #########
+  rDataQualityStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: data-quality-sm
+      DefinitionString: !Sub
+        - |-
+          {
+            "Comment": "Data Quality WorkFlow",
+            "StartAt": "Data Quality Controller",
+            "States": {
+              "Data Quality Controller": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                "Parameters": {
+                  "JobName": "${gController}",
+                  "Arguments": {
+                    "--glueDatabase.$":"$.glueDatabase",
+                    "--glueTables.$":"$.glueTables"
+                  }
+                },
+                "ResultPath": "$.output",
+                "Next": "Run Glue Crawler"
+              },
+              "Run Glue Crawler": {
+                "Type": "Task",
+                "Resource": "${lCrawler}",
+                "Comment": "Run Glue Crawler",
+                "ResultPath": "$.statusCode",
+                "End": true
+              }
+            }
+          }
+        - {
+            gController: !Ref rControllerGlueJob,
+            lCrawler: !GetAtt rGlueCrawlerLambdaFunction.Arn,
+          }
+      RoleArn: !GetAtt rStatesExecutionRole.Arn
+
+  ######## GLUE #########
+  rControllerGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: pythonshell
+        PythonVersion: "3"
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-controller.py"
+      DefaultArguments:
+        "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
+        "--enable-metrics": "true"
+        "--env": !Ref pEnv
+        "--glueSuggestionVerificationJob": !Ref rSuggestionVerificationRunnerGlueJob
+        "--glueVerificationJob": !Ref rVerificationRunnerGlueJob
+        "--glueProfilerJob": !Ref rProfilerRunnerGlueJob
+        "--glueDatabase": "default"
+        "--glueTables": "table1,table2"
+        "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      GlueVersion: "1.0"
+      Timeout: 65
+      Name: data-quality-controller
+      Role: !GetAtt rGlueJobsIAMRole.Arn
+
+  rSuggestionVerificationRunnerGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-suggestion-analysis-verification-runner.scala"
+      DefaultArguments:
+        "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
+        "--job-language": "scala"
+        "--class": "GlueApp"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-continuous-log-filter": "true"
+        "--enable-metrics": "true"
+        "--enable-glue-datacatalog": ""
+        "--extra-jars": !Sub "s3://${pArtifactsBucket}/deequ/jars/deequ-1.0.3-RC1.jar"
+        "--dynamodbSuggestionTableName": "default"
+        "--dynamodbAnalysisTableName": "default"
+        "--glueDatabase": "default"
+        "--glueTables": "table1,table2"
+        "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      GlueVersion: "2.0"
+      MaxCapacity: 3
+      MaxRetries: 0
+      Timeout: 60
+      Name: data-quality-suggestion-analysis-verification-runner
+      Role: !GetAtt rGlueJobsIAMRole.Arn
+
+  rVerificationRunnerGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-analysis-verification-runner.scala"
+      DefaultArguments:
+        "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
+        "--job-language": "scala"
+        "--class": "GlueApp"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-continuous-log-filter": "true"
+        "--enable-metrics": "true"
+        "--enable-glue-datacatalog": ""
+        "--extra-jars": !Sub "s3://${pArtifactsBucket}/deequ/jars/deequ-1.0.3-RC1.jar"
+        "--dynamodbSuggestionTableName": "default"
+        "--dynamodbAnalysisTableName": "default"
+        "--glueDatabase": "default"
+        "--glueTables": "table1,table2"
+        "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      MaxRetries: 0
+      Timeout: 60
+      GlueVersion: "2.0"
+      MaxCapacity: 3
+      Name: data-quality-analysis-verification-runner
+      Role: !GetAtt rGlueJobsIAMRole.Arn
+
+  rProfilerRunnerGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-profile-runner.scala"
+      DefaultArguments:
+        "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
+        "--job-language": "scala"
+        "--class": "GlueApp"
+        "--enable-continuous-cloudwatch-log": "true"
+        "--enable-continuous-log-filter": "true"
+        "--enable-metrics": "true"
+        "--enable-glue-datacatalog": ""
+        "--extra-jars": !Sub "s3://${pArtifactsBucket}/deequ/jars/deequ-1.0.3-RC1.jar"
+        "--glueDatabase": "default"
+        "--glueTables": "table1,table2"
+        "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      MaxRetries: 0
+      Timeout: 60
+      GlueVersion: "2.0"
+      MaxCapacity: 3
+      Name: data-quality-profile-runner
+      Role: !GetAtt rGlueJobsIAMRole.Arn
+
+  rGlueDataCatalog:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Description: Data Quality Catalog
+        Name: data_quality_db
+
+  rGlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt rGlueJobsIAMRole.Arn
+      DatabaseName: !Ref rGlueDataCatalog
+      Name: data-quality-crawler
+      Targets:
+        S3Targets:
+          - Path: !Sub s3://${rDataQualityBucket}
+
+  ######## SSM #########
+  AmplifyAppIdSSM:
+    Condition: EnableFrontEnd
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /DataQuality/Amplify/AppID
+      Type: String
+      Value: !GetAtt AmplifyApp.AppId
+      Description: Data Quality Amplify App Id

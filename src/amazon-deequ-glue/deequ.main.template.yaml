@@ -1,0 +1,337 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Automated deployment infrastructure
+
+Parameters:
+  pEnv:
+    Description: The environment name
+    Type: String
+    Default: dev
+  pcodeBranch:
+    Description: git branch i,e alphaline or mainline
+    Type: String
+    Default: alphaline    
+
+Resources:
+  rCodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:CreateStackSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackSet
+                  - cloudformation:DescribeStackSetOperation
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:GetTemplate
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:UpdateStack
+                  - cloudformation:UpdateStackSet
+                  - cloudformation:ValidateTemplate
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - events:DescribeRule
+                  - events:PutRule
+                  - events:PutTargets
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - iam:AttachGroupPolicy
+                  - iam:AttachRolePolicy
+                  - iam:CreateGroup
+                  - iam:CreatePolicy
+                  - iam:CreatePolicyVersion
+                  - iam:CreateRole
+                  - iam:CreateServiceLinkedRole
+                  - iam:GetGroup
+                  - iam:GetGroupPolicy
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:GetUser
+                  - iam:ListGroups
+                  - iam:ListPolicies
+                  - iam:ListPolicyVersions
+                  - iam:ListRolePolicies
+                  - iam:ListRoles
+                  - iam:PassRole
+                  - iam:PutGroupPolicy
+                  - iam:PutRolePolicy
+                  - iam:TagRole
+                  - iam:UpdateGroup
+                  - iam:UpdateRole
+                  - iam:UpdateRoleDescription
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucketAcl
+                  - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+                  - s3:PutBucketAcl
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketVersioning
+                  - s3:PutBucketWebsite
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - dynamodb:CreateTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:ListTagsOfResource
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:UpdateTable
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - codecommit:CreateBranch
+                  - codecommit:CreateRepository
+                  - codecommit:GetBranch
+                  - codecommit:GetRepository
+                  - codecommit:GetRepositoryTriggers
+                  - codecommit:GitPull
+                  - codecommit:GitPush
+                  - codecommit:PutRepositoryTriggers
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - amplify:CreateApp
+                  - amplify:CreateBranch
+                  - amplify:GetBranch
+                  - amplify:GetApp
+                  - amplify:GetJob
+                  - amplify:ListApps
+                  - amplify:StartJob
+                  - amplify:TagResource
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                  - lambda:CreateEventSourceMapping
+                  - lambda:CreateFunction
+                  - lambda:GetEventSourceMapping
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:GetLayerVersion
+                  - lambda:PublishLayerVersion
+                  - lambda:TagResource
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - sns:CreateTopic
+                  - sns:GetTopicAttributes
+                  - sns:ListTopics
+                  - sns:Subscribe
+                  - sns:TagResource
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - sqs:CreateQueue
+                  - sqs:GetQueueAttributes
+                  - sqs:SetQueueAttributes
+                  - sqs:TagQueue
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - ssm:AddTagsToResource
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:ListTagsForResource
+                  - ssm:PutParameter
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - states:CreateStateMachine
+                  - states:DescribeStateMachine
+                  - states:ListStateMachines
+                  - states:TagResource
+                  - states:UntagResource
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - glue:CreateCrawler
+                  - glue:CreateDatabase
+                  - glue:CreateJob
+                  - glue:GetCrawler
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:GetJob
+                  - glue:GetJobs
+                  - glue:GetTags
+                  - glue:ListCrawlers
+                  - glue:ListJobs
+                  - glue:TagResource
+                  - glue:UntagResource
+
+  rLambdaTriggerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource:
+                  - !GetAtt rCodeBuildProject.Arn
+
+  rCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: ENV
+            Type: PLAINTEXT
+            Value: !Ref pEnv
+          - Name: REPO
+            Type: PLAINTEXT
+            Value: "https://github.com/vijay75252/deequ"
+            
+      ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
+      TimeoutInMinutes: 30
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                  python: 3.7
+            build:
+              commands:
+                - echo Configuring AWS credentials
+                - echo AWS_CONTAINER_CREDENTIALS_RELATIVE_URI $AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+                - curl -qL -o aws_credentials.json http://169.254.170.2/$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI > aws_credentials.json
+                - aws configure set aws_access_key_id `jq -r '.AccessKeyId' aws_credentials.json`
+                - aws configure set aws_secret_access_key `jq -r '.SecretAccessKey' aws_credentials.json`
+                - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
+                - aws configure set default.region $AWS_REGION
+                - git clone $REPO
+                - cd ./src/amazon-deequ-glue 
+                - git config --global user.email "robot@example.com"
+                - git config --global user.name "robot"
+                - ./deploy.sh -e $ENV
+          artifacts:
+            files:
+              - '*'
+              - '**/*'
+
+  rLambdaTrigger:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.7
+      Timeout: 120
+      MemorySize: 128
+      Handler: index.lambda_handler
+      Role: !GetAtt rLambdaTriggerRole.Arn
+      Environment:
+        Variables:
+          CODE_BUILD_PROJECT: !Ref rCodeBuildProject
+      Code:
+        ZipFile: |
+          import os
+          import json
+
+          import boto3
+          from botocore.exceptions import ClientError
+          from urllib.request import Request, urlopen
+
+          CODE_BUILD_PROJECT = os.getenv('CODE_BUILD_PROJECT')
+          cb = boto3.client('codebuild')
+
+          def send_response(e, c, rs, rd):
+              r = json.dumps({
+                  "Status": rs,
+                  "Reason": "CloudWatch Log Stream: " + c.log_stream_name,
+                  "PhysicalResourceId": e['LogicalResourceId'],
+                  "StackId": e['StackId'],
+                  "RequestId": e['RequestId'],
+                  "LogicalResourceId": e['LogicalResourceId'],
+                  "Data": rd
+              })
+              d = str.encode(r)
+              h = {
+                  'content-type': '',
+                  'content-length': str(len(d))
+              }
+              req = Request(e['ResponseURL'], data=d, method='PUT', headers=h)
+              r = urlopen(req)
+
+          def lambda_handler(event, context):
+              request_type = event['RequestType']
+              try:
+                  if request_type == 'Create':
+                      cb.start_build(projectName=CODE_BUILD_PROJECT)
+                      send_response(event, context, "SUCCESS", {
+                                    "Message": "Created"})
+
+                  else:
+                      send_response(event, context, "SUCCESS", {
+                                    "Message": "Function Not Applicable"})
+              except Exception as e:
+                  send_response(
+                      event,
+                      context,
+                      "FAILED",
+                      {
+                          "Message": "Exception"
+                      }
+                  )
+                  raise e
+
+  rCustomLambdaTrigger:
+    Type: Custom::LambdaTrigger
+    Properties:
+      ServiceToken: !GetAtt rLambdaTrigger.Arn
