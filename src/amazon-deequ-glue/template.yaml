@@ -66,12 +66,12 @@ Resources:
               commands:
                 - yarn run build
           artifacts:
-            baseDirectory: src/deequ-constraints/build
+            baseDirectory: src/amazon-deequ-glue/deequ-constraints/build
             files:
               - '**/*'
           cache:
             paths:
-              - src/deequ-constraints/node_modules/**/*
+              - src/amazon-deequ-glue/deequ-constraints/node_modules/**/*
 
   ######## EVENTS #########
   rDataQualityTriggerEventRule:
