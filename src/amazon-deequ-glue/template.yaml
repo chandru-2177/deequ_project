@@ -52,7 +52,7 @@ Resources:
           phases:
             preBuild:
               commands:
-                - cd src/deequ-constraints
+                - cd src/amazon-deequ-glue/deequ-constraints
                 - npm install -g @aws-amplify/cli
             build:
               commands:
