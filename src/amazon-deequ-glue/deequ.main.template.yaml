@@ -237,7 +237,7 @@ Resources:
             Value: !Ref pEnv
           - Name: REPO
             Type: PLAINTEXT
-            Value: https://github.com/vijay75252/deequ_project/src/amazon-deequ-glue
+            Value: https://github.com/vijay75252/deequ_project/tree/main/src/amazon-deequ-glue
             
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
