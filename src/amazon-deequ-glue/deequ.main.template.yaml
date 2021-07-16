@@ -259,7 +259,7 @@ Resources:
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
                 - git clone $REPO
-                - cd ./src/amazon-deequ-glue 
+                - cd ./deequ/src/amazon-deequ-glue 
                 - git config --global user.email "robot@example.com"
                 - git config --global user.name "robot"
                 - ./deploy.sh -e $ENV
