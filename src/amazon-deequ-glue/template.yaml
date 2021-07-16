@@ -52,7 +52,7 @@ Resources:
           phases:
             preBuild:
               commands:
-                - cd src/amazon-deequ-glue/deequ-constraints
+                - cd deequ-constraints
                 - npm install -g @aws-amplify/cli
             build:
               commands:
@@ -66,12 +66,12 @@ Resources:
               commands:
                 - yarn run build
           artifacts:
-            baseDirectory: src/amazon-deequ-glue/deequ-constraints/build
+            baseDirectory: deequ-constraints/build
             files:
               - '**/*'
           cache:
             paths:
-              - src/amazon-deequ-glue/deequ-constraints/node_modules/**/*
+              - deequ-constraints/node_modules/**/*
 
   ######## EVENTS #########
   rDataQualityTriggerEventRule:
