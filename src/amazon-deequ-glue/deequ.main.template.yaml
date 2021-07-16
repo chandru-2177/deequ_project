@@ -237,7 +237,7 @@ Resources:
             Value: !Ref pEnv
           - Name: REPO
             Type: PLAINTEXT
-            Value: "https://github.com/vijay75252/deequ_project"
+            Value: https://github.com/vijay75252/deequ_project/src/amazon-deequ-glue
             
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
@@ -259,7 +259,7 @@ Resources:
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
                 - git clone $REPO
-                - cd ./deequ_project/src/amazon-deequ-glue 
+                - cd ./amazon-deequ-glue
                 - git config --global user.email "robot@example.com"
                 - git config --global user.name "robot"
                 - ./deploy.sh -e $ENV
