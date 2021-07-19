@@ -214,6 +214,7 @@ Resources:
                   - ec2:DescribeAvailabilityZones
                   - ec2:DescribeAccountAttributes
                   - ec2:allocateAddress
+                  - ec2:DescribeSubnets
                   
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
