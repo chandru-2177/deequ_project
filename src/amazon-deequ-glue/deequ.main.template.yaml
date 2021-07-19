@@ -220,6 +220,8 @@ Resources:
                   - ec2:DescribeVpcs
                   - ec2:DescribeVpnConnections
                   - ec2:DescribeVpnGateways
+                  - ec2:ModifySubnetAttribute
+                  - ec2:describeAddresses
 
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
