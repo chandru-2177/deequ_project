@@ -197,6 +197,10 @@ Resources:
                   - glue:ListJobs
                   - glue:TagResource
                   - glue:UntagResource
+                  - glue:CreateConnection
+                  - glue:GetConnection
+                  - glue:GetConnections
+                  - glue:UpdateConnection
               - Resource: "*"
                 Effect: Allow
                 Action:
@@ -228,7 +232,8 @@ Resources:
               - Resource: "*"
                 Effect: Allow
                 Action:                
-                  - secretsmanager:GetSecretValue 
+                  - secretsmanager:GetSecretValue
+                  
 
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
