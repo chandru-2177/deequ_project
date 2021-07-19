@@ -197,7 +197,7 @@ Resources:
                   - glue:ListJobs
                   - glue:TagResource
                   - glue:UntagResource
-               - Resource: "*"
+              - Resource: "*"
                 Effect: Allow
                 Action:
                   - ec2:CreateVpc
