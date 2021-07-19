@@ -229,6 +229,7 @@ Resources:
                   - ec2:DescribeSecurityGroups
                   - ec2:CreateRoute
                   - ec2:AssociateRouteTable
+                  - ec2:DescribeNatGateways
               - Resource: "*"
                 Effect: Allow
                 Action:                
