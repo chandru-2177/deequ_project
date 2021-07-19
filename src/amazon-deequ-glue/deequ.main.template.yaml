@@ -224,6 +224,11 @@ Resources:
                   - ec2:describeAddresses
                   - ec2:DescribeSecurityGroups
                   - ec2:CreateRoute
+                  - ec2:AssociateRouteTable
+              - Resource: "*"
+                Effect: Allow
+                Action:                
+                  - secretsmanager:GetSecretValue 
 
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
