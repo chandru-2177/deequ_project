@@ -19,6 +19,29 @@ Parameters:
     Description: The environment name
     Type: String
     Default: dev
+  Stage: 
+    Type: String
+    Default: ''
+    Description: The environment name alphaline or prod , useful for secrets
+  VPCForGlueCIDR: 
+      Description: Please enter the IP range (CIDR notation) for this VPC
+      Type: String
+      Default: 10.192.0.0/16
+  GluePublicSubnetCIDR:
+      Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
+      Type: String
+      Default: 10.192.10.0/24
+  GluePrivateSubnetCIDR:
+      Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
+      Type: String
+      Default: 10.192.20.0/24    
+
+
+Mappings:
+  alphaline:
+    RedshiftSecret: { Name: "redshift-alpha-secret" }
+  prod:
+    RedshiftSecret: { Name: "redshift-prod-secret" }
 
 Globals:
   Function:
@@ -30,6 +53,169 @@ Conditions:
   DisableFrontEnd: !Equals [!Ref pCreateFrontEnd, "false"]
 
 Resources:
+
+  # VPC setup for establishing cross-account or a 
+  # cross-region AWS Glue connection. It will create the following components:
+  # A VPC with:
+  #       1 Public Subnet
+  #       1 Private Subnet
+  # An Internet Gateway, and route for outbound traffic from public subnet through Internet Gateway 
+  # A NAT Gateway, and route for outbbound traffic from private subnet through NAT Gateway
+  VPCForGlue:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VPCForGlueCIDR
+      Tags:
+        - Key: Name
+          Value: VPCForGlue
+ 
+  GluePublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPCForGlue
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref GluePublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: GluePublicSubnet
+      
+  GluePrivateSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPCForGlue
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref GluePrivateSubnetCIDR
+      MapPublicIpOnLaunch: false     
+      Tags:
+        - Key: Name
+          Value: 'GluePrivateSubnet'
+  
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGForOutgoingGlueTraffic
+        - Key: Network
+          Value: Public
+  
+  InternetGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPCForGlue
+      InternetGatewayId: !Ref InternetGateway
+  
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPCForGlue
+      Tags:
+        - Key: Network
+          Value: Public
+        - Key: Name
+          Value: GluePublicRouteTable
+  
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+ 
+  GluePublicSubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref GluePublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Please do not change this resource or its logical ID 
+  NatPublicIP:
+    Type: "AWS::EC2::EIP"
+    DependsOn: VPCForGlue
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: "AWS::EC2::NatGateway"
+    DependsOn: NatPublicIP
+    Properties: 
+      AllocationId: !GetAtt NatPublicIP.AllocationId
+      SubnetId: !Ref GluePublicSubnet
+      Tags:
+        - Key: Name
+          Value: GlueNatGateway
+ 
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPCForGlue
+      Tags:
+        - Key: Network
+          Value: Private
+        - Key: Name
+          Value: GluePrivateRouteTable
+  
+  PrivateRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+ 
+  GluePrivateSubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref GluePrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  GlueInternalConnection:
+    Type: 'AWS::Glue::Connection'
+    Properties:
+      CatalogId: !Ref 'AWS::AccountId'
+      ConnectionInput:
+        Description: 'Glue Redshift Connection'
+        PhysicalConnectionRequirements:
+          AvailabilityZone: !Sub "${AWS::Region}"
+          SecurityGroupIdList: 
+            - !GetAtt VPCForGlue.DefaultSecurityGroup
+          SubnetId: !Ref GluePrivateSubnet
+        ConnectionType: 'JDBC'
+        ConnectionProperties:
+          'JDBC_CONNECTION_URL': 
+            Fn::Join:
+            - "/"
+            - - "jdbc:redshift:/"
+              - Fn::Join:
+                  - ""
+                  - - '{{resolve:secretsmanager:'
+                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - ':SecretString:host}}'
+                    - ':'
+                    - '{{resolve:secretsmanager:'
+                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - ':SecretString:port}}'
+              - Fn::Join:
+                  - ""
+                  - - '{{resolve:secretsmanager:'
+                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - ':SecretString:dbname}}'
+                    - "?ssl=false"
+          'USERNAME': 
+              Fn::Join:
+              - ''
+              - - '{{resolve:secretsmanager:'
+                - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                - ':SecretString:username}}'
+          'PASSWORD': 
+              Fn::Join:
+              - ''
+              - - '{{resolve:secretsmanager:'
+                - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                - ':SecretString:password}}'
+        Name:  pysa-glue-internal-redshift
+
   AmplifyDevBranch:
     Type: AWS::Amplify::Branch
     Condition: EnableFrontEnd
@@ -520,6 +706,9 @@ Resources:
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      Connections:
+        Connections:
+          - !Ref GlueInternalConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       GlueVersion: "1.0"
@@ -532,7 +721,7 @@ Resources:
     Properties:
       Command:
         Name: glueetl
-        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-suggestion-analysis-verification-runner.scala"
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-suggestion-analysis-verification-runner-rs.scala"
       DefaultArguments:
         "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
         "--job-language": "scala"
@@ -547,6 +736,9 @@ Resources:
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      Connections:
+        Connections:
+          - !Ref GlueInternalConnection      
       ExecutionProperty:
         MaxConcurrentRuns: 10
       GlueVersion: "2.0"
@@ -561,7 +753,7 @@ Resources:
     Properties:
       Command:
         Name: glueetl
-        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-analysis-verification-runner.scala"
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-analysis-verification-runner-rs.scala"
       DefaultArguments:
         "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
         "--job-language": "scala"
@@ -576,6 +768,9 @@ Resources:
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      Connections:
+        Connections:
+          - !Ref GlueInternalConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       MaxRetries: 0
@@ -590,7 +785,7 @@ Resources:
     Properties:
       Command:
         Name: glueetl
-        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-profile-runner.scala"
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-profile-runner-rs.scala"
       DefaultArguments:
         "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
         "--job-language": "scala"
@@ -603,6 +798,9 @@ Resources:
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      Connections:
+        Connections:
+          - !Ref GlueInternalConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       MaxRetries: 0

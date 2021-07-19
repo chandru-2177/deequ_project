@@ -108,6 +108,7 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
       ParameterKey=pArtifactsBucket,ParameterValue=$S3_BUCKET \
       ParameterKey=pCreateFrontEnd,ParameterValue=$UI_FLAG \
       ParameterKey=pEnv,ParameterValue=$ENV \
+      ParameterKey=Stage,ParameterValue=$ENV \
     --tags file://$DIRNAME/tags.json \
     --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND"
 
