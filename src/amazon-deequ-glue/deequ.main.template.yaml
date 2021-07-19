@@ -197,7 +197,17 @@ Resources:
                   - glue:ListJobs
                   - glue:TagResource
                   - glue:UntagResource
-
+               - Resource: "*"
+                Effect: Allow
+                Action:
+                  - ec2:CreateVpc
+                  - ec2:CreateVpcEndpoint
+                  - ec2:CreateRouteTable
+                  - ec2:CreateSubnet
+                  - ec2:CreateNatGateway
+                  - ec2:CreateInternetGateway
+                  - ec2:AttachInternetGateway
+                  
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
     Properties:
