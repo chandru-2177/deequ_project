@@ -211,6 +211,7 @@ Resources:
                   - ec2:DescribeVpcs
                   - ec2:createTags
                   - ec2:ModifyVpcAttribute
+                  - ec2:DescribeAvailabilityZones
 
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
