@@ -18,7 +18,7 @@ Parameters:
   pEnv:
     Description: The environment name
     Type: String
-    Default: dev
+    Default: ''
   Stage: 
     Type: String
     Default: ''
