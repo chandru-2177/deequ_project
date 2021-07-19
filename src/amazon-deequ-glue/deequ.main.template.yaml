@@ -222,6 +222,8 @@ Resources:
                   - ec2:DescribeVpnGateways
                   - ec2:ModifySubnetAttribute
                   - ec2:describeAddresses
+                  - ec2:DescribeSecurityGroups
+                  - ec2:CreateRoute
 
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
