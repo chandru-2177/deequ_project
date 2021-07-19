@@ -22,7 +22,7 @@ Parameters:
   Stage: 
     Type: String
     Default: ''
-    Description: The environment name alphaline or prod , useful for secrets
+    Description: The environment name alpha or prod , useful for secrets
   VPCForGlueCIDR: 
       Description: Please enter the IP range (CIDR notation) for this VPC
       Type: String
@@ -170,7 +170,7 @@ Resources:
       SubnetId: !Ref GluePrivateSubnet
       RouteTableId: !Ref PrivateRouteTable
 
-  GlueInternalConnection:
+  GlueRedshiftConnection:
     Type: 'AWS::Glue::Connection'
     Properties:
       CatalogId: !Ref 'AWS::AccountId'
@@ -214,7 +214,7 @@ Resources:
               - - '{{resolve:secretsmanager:'
                 - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
                 - ':SecretString:password}}'
-        Name:  pysa-glue-internal-redshift
+        Name:  wfi-redshift-glue-connection
 
   AmplifyDevBranch:
     Type: AWS::Amplify::Branch
@@ -708,7 +708,7 @@ Resources:
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
-          - !Ref GlueInternalConnection           
+          - !Ref GlueRedshiftConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       GlueVersion: "1.0"
@@ -738,7 +738,7 @@ Resources:
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
-          - !Ref GlueInternalConnection      
+          - !Ref GlueRedshiftConnection      
       ExecutionProperty:
         MaxConcurrentRuns: 10
       GlueVersion: "2.0"
@@ -770,7 +770,7 @@ Resources:
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
-          - !Ref GlueInternalConnection           
+          - !Ref GlueRedshiftConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       MaxRetries: 0
@@ -800,7 +800,7 @@ Resources:
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
-          - !Ref GlueInternalConnection           
+          - !Ref GlueRedshiftConnection           
       ExecutionProperty:
         MaxConcurrentRuns: 10
       MaxRetries: 0
