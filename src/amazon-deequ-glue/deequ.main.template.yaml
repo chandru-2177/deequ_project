@@ -215,7 +215,12 @@ Resources:
                   - ec2:DescribeAccountAttributes
                   - ec2:allocateAddress
                   - ec2:DescribeSubnets
-                  
+                  - ec2:DescribeRouteTables
+                  - ec2:DescribeTags
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeVpnConnections
+                  - ec2:DescribeVpnGateways
+
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
     Properties:
