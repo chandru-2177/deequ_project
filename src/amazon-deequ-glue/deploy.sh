@@ -110,7 +110,7 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
       ParameterKey=pEnv,ParameterValue=$ENV \
       ParameterKey=Stage,ParameterValue=$ENV \
     --tags file://$DIRNAME/tags.json \
-    --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND"
+    --capabilities "CAPABILITY_IAM","CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND"
 
   echo "Waiting for stack to be created ..."
   aws cloudformation wait stack-create-complete --profile $PROFILE --region $REGION \
