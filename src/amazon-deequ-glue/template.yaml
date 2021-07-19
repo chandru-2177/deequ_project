@@ -38,7 +38,7 @@ Parameters:
 
 
 Mappings:
-  alphaline:
+  alpha:
     RedshiftSecret: { Name: "redshift-alpha-secret" }
   prod:
     RedshiftSecret: { Name: "redshift-prod-secret" }

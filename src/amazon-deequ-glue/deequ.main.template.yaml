@@ -3,13 +3,13 @@ Description: Automated deployment infrastructure1
 
 Parameters:
   pEnv:
-    Description: The environment name
+    Description: The environment name alpha or prod
     Type: String
-    Default: dev
+    Default: alpha
   pcodeBranch:
     Description: git branch i,e alphaline or mainline
     Type: String
-    Default: alphaline    
+    Default: main    
 
 Resources:
   rCodeBuildServiceRole:
