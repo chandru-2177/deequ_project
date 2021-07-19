@@ -201,7 +201,6 @@ Resources:
                   - - '{{resolve:secretsmanager:'
                     - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
                     - ':SecretString:dbname}}'
-                    - "?ssl=false"
           'USERNAME': 
               Fn::Join:
               - ''
