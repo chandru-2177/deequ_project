@@ -209,7 +209,10 @@ Resources:
                   - ec2:AttachInternetGateway
                   - ec2:DescribeInternetGateways
                   - ec2:DescribeVpcs
-                  
+                  - ec2:createTags
+                  - ec2:ModifyVpcAttribute
+                  - ec2:
+
   rLambdaTriggerRole:
     Type: AWS::IAM::Role
     Properties:
