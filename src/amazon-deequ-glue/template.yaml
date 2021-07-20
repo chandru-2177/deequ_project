@@ -515,6 +515,10 @@ Resources:
                   - ssm:GetParameters
                 Resource:
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
+              - Resource: "*"
+                Effect: Allow
+                Action:                
+                - secretsmanager:GetSecretValue    
 
   rGlueCrawlerRole:
     Type: AWS::IAM::Role
