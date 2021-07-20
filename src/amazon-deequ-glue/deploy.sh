@@ -16,7 +16,7 @@ usage () { echo "
     -d -- Disable AWS Amplify Web UI
     -b -- Name of Redshift Secret
 "; }
-options=':n:p:r:e:dh'
+options=':n:p:r:e:dh:b'
 while getopts $options option
 do
     case "$option" in
@@ -24,7 +24,7 @@ do
         p  ) pflag=true; PROFILE=$OPTARG;;
         r  ) rflag=true; REGION=$OPTARG;;
         e  ) eflag=true; ENV=$OPTARG;;
-        b  ) eflag=true; RS_SECRET_NAME=$OPTARG;;
+        b  ) bflag=true; RS_SECRET_NAME=$OPTARG;;
         d  ) dflag=true;;
         h  ) usage; exit;;
         \? ) echo "Unknown option: -$OPTARG" >&2; exit 1;;
