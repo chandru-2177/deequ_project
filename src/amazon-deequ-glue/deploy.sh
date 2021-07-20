@@ -4,6 +4,7 @@ pflag=false
 rflag=false
 eflag=false
 dflag=false
+bflag=false
 
 DIRNAME=$(pwd)
 
@@ -32,6 +33,9 @@ do
         *  ) echo "Unimplemented option: -$OPTARG" >&2; exit 1;;
     esac
 done
+
+echo "Here is the connection !!"
+echo $RS_SECRET_NAME
 
 if ! $pflag
 then
