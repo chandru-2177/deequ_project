@@ -648,7 +648,7 @@ Resources:
       Timeout: 120
       Role: !GetAtt rGlueCrawlerRole.Arn
 
-  ######## STEP FUNCTIONS #########
+ ######## STEP FUNCTIONS #########
   rDataQualityStateMachine:
     Type: AWS::StepFunctions::StateMachine
     Properties:
@@ -677,6 +677,19 @@ Resources:
                 "Resource": "${lCrawler}",
                 "Comment": "Run Glue Crawler",
                 "ResultPath": "$.statusCode",
+                "Next": "Run Glue Crawler"
+              },
+              "Data Anomoly Alert": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                "Parameters": {
+                  "JobName": "${gAnomolyAlert}",
+                  "Arguments": {
+                    "--glueDatabase.$":"$.glueDatabase",
+                    "--glueTables.$":"$.glueTables"
+                  }
+                },
+                "ResultPath": "$.output",
                 "End": true
               }
             }
@@ -684,6 +697,7 @@ Resources:
         - {
             gController: !Ref rControllerGlueJob,
             lCrawler: !GetAtt rGlueCrawlerLambdaFunction.Arn,
+            gAnomolyAlert: !Ref rAnomolyAlertGlueJob,
           }
       RoleArn: !GetAtt rStatesExecutionRole.Arn
 
@@ -809,6 +823,29 @@ Resources:
       Name: data-quality-profile-runner
       Role: !GetAtt rGlueJobsIAMRole.Arn
 
+  rAnomolyAlertGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        Name: glueetl
+        PythonVersion: "3"
+        ScriptLocation: !Sub "s3://${pArtifactsBucket}/deequ/scripts/deequ-anomoly-alert.py"
+      DefaultArguments:
+        "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
+        "--enable-metrics": "true"
+        "--env": !Ref pEnv
+        "--glueDatabase": "default"
+        "--glueTables": "table1,table2"
+        "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
+      Connections:
+        Connections:
+          - !Ref GlueRedshiftConnection           
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      GlueVersion: "2.0"
+      Timeout: 65
+      Name: data-quality-anomoly-alert
+      Role: !GetAtt rGlueJobsIAMRole.Arn
   rGlueDataCatalog:
     Type: AWS::Glue::Database
     Properties:
