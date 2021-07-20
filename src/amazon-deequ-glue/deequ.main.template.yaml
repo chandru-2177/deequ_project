@@ -277,10 +277,10 @@ Resources:
           - Name: ENV
             Type: PLAINTEXT
             Value: !Ref pEnv
-          - Name: CODE-BRANCH
+          - Name: CODEBRANCH
             Type: PLAINTEXT
             Value: !Ref pcodeBranch            
-          - Name: REDSHIFT-SECRET
+          - Name: REDSHIFTSECRET
             Type: PLAINTEXT
             Value: !Ref pRedshiftSecretName              
           - Name: REPO
@@ -306,11 +306,11 @@ Resources:
                 - aws configure set aws_secret_access_key `jq -r '.SecretAccessKey' aws_credentials.json`
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
-                - git clone --single-branch --branch $CODE-BRANCH $REPO
+                - git clone --single-branch --branch $CODEBRANCH $REPO
                 - cd ./deequ_project/src/amazon-deequ-glue
                 - git config --global user.email "robot@example.com"
                 - git config --global user.name "robot"
-                - ./deploy.sh -e $ENV -b $REDSHIFT-SECRET
+                - ./deploy.sh -e $ENV -b $REDSHIFTSECRET
           artifacts:
             files:
               - '*'
