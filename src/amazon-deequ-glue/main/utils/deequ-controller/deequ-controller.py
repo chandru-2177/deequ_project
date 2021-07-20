@@ -61,7 +61,9 @@ args = getResolvedOptions(sys.argv, [
     'glueVerificationJob',
     'glueProfilerJob',
     'glueDatabase',
-    'glueTables'])
+    'glueTables',
+    'redShiftSecretRegion',
+    'redShiftSecretName'])
 
 env = args['env']
 table_suffix = get_table_suffix(env)
@@ -72,6 +74,8 @@ verification_job_name = args['glueVerificationJob']
 profile_job_name = args['glueProfilerJob']
 glue_database = args['glueDatabase']
 glue_tables = [x.strip() for x in args['glueTables'].split(',')]
+redShiftSecretRegion = args['redShiftSecretRegion']
+redShiftSecretName = args['redShiftSecretName']
 
 # Determine which tables had Deequ data quality suggestions set up already
 suggestions_tables = []
@@ -93,7 +97,9 @@ if suggestions_tables:
             '--dynamodbSuggestionTableName': suggestion_dynamodb_table_name,
             '--dynamodbAnalysisTableName': analysis_dynamodb_table_name,
             '--glueDatabase': glue_database,
-            '--glueTables': ','.join(suggestions_tables)
+            '--glueTables': ','.join(suggestions_tables),
+            '--redshiftSecretRegion': redShiftSecretRegion,
+            '--redshiftSecretName': redShiftSecretName          
         }
     )
 if verification_tables:
@@ -103,7 +109,9 @@ if verification_tables:
             '--dynamodbSuggestionTableName': suggestion_dynamodb_table_name,
             '--dynamodbAnalysisTableName': analysis_dynamodb_table_name,
             '--glueDatabase': glue_database,
-            '--glueTables': ','.join(verification_tables)
+            '--glueTables': ','.join(verification_tables),
+            '--redshiftSecretRegion': redShiftSecretRegion,
+            '--redshiftSecretName': redShiftSecretName             
         }
     )
 
@@ -111,7 +119,9 @@ profile_response = glue.start_job_run(
     JobName=profile_job_name,
     Arguments={
         '--glueDatabase': glue_database,
-        '--glueTables': ','.join(glue_tables)
+        '--glueTables': ','.join(glue_tables),
+        '--redshiftSecretRegion': redShiftSecretRegion,
+        '--redshiftSecretName': redShiftSecretName         
     }
 )
 

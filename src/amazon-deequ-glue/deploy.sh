@@ -14,6 +14,7 @@ usage () { echo "
     -r -- AWS Region to use
     -e -- Name of the environment
     -d -- Disable AWS Amplify Web UI
+    -b -- Name of Redshift Secret
 "; }
 options=':n:p:r:e:dh'
 while getopts $options option
@@ -23,6 +24,7 @@ do
         p  ) pflag=true; PROFILE=$OPTARG;;
         r  ) rflag=true; REGION=$OPTARG;;
         e  ) eflag=true; ENV=$OPTARG;;
+        b  ) eflag=true; RS_SECRET_NAME=$OPTARG;;
         d  ) dflag=true;;
         h  ) usage; exit;;
         \? ) echo "Unknown option: -$OPTARG" >&2; exit 1;;
@@ -109,6 +111,7 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
       ParameterKey=pCreateFrontEnd,ParameterValue=$UI_FLAG \
       ParameterKey=pEnv,ParameterValue=$ENV \
       ParameterKey=Stage,ParameterValue=$ENV \
+      ParameterKey=pRedShiftSecretName,ParameterValue=$RS_SECRET_NAME \
     --tags file://$DIRNAME/tags.json \
     --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND"
 

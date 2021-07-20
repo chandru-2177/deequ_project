@@ -23,6 +23,10 @@ Parameters:
     Type: String
     Default: ''
     Description: The environment name alpha or prod , useful for secrets
+  pRedShiftSecretName: 
+    Type: String
+    Default: ''
+    Description: Secret name of Redshift that you are planning to run deequ-glue jobs.  
   VPCForGlueCIDR: 
       Description: Please enter the IP range (CIDR notation) for this VPC
       Type: String
@@ -36,12 +40,6 @@ Parameters:
       Type: String
       Default: 10.192.20.0/24    
 
-
-Mappings:
-  alpha:
-    RedshiftSecret: { Name: "redshift-alpha-secret" }
-  prod:
-    RedshiftSecret: { Name: "redshift-prod-secret" }
 
 Globals:
   Function:
@@ -190,28 +188,28 @@ Resources:
               - Fn::Join:
                   - ""
                   - - '{{resolve:secretsmanager:'
-                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - !Ref pRedShiftSecretName
                     - ':SecretString:host}}'
                     - ':'
                     - '{{resolve:secretsmanager:'
-                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - !Ref pRedShiftSecretName
                     - ':SecretString:port}}'
               - Fn::Join:
                   - ""
                   - - '{{resolve:secretsmanager:'
-                    - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                    - !Ref pRedShiftSecretName
                     - ':SecretString:dbname}}'
           'USERNAME': 
               Fn::Join:
               - ''
               - - '{{resolve:secretsmanager:'
-                - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                - !Ref pRedShiftSecretName
                 - ':SecretString:username}}'
           'PASSWORD': 
               Fn::Join:
               - ''
               - - '{{resolve:secretsmanager:'
-                - {"Fn::FindInMap" : [{"Ref": "Stage"}, "RedshiftSecret", "Name"]}
+                - !Ref pRedShiftSecretName
                 - ':SecretString:password}}'
         Name:  wfi-redshift-glue-connection
 
@@ -670,7 +668,9 @@ Resources:
                   "JobName": "${gController}",
                   "Arguments": {
                     "--glueDatabase.$":"$.glueDatabase",
-                    "--glueTables.$":"$.glueTables"
+                    "--glueTables.$":"$.glueTables",
+                    "--redShiftSecretRegion.$":"$.redShiftSecretRegion",
+                    "--redShiftSecretName.$":"$.redShiftSecretName"
                   }
                 },
                 "ResultPath": "$.output",
@@ -722,6 +722,8 @@ Resources:
         "--glueProfilerJob": !Ref rProfilerRunnerGlueJob
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
+        "--redShiftSecretRegion": "default"
+        "--redShiftSecretName": "default"           
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
@@ -752,6 +754,8 @@ Resources:
         "--dynamodbAnalysisTableName": "default"
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
+        "--redShiftSecretRegion": "default"
+        "--redShiftSecretName": "default"        
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
@@ -784,6 +788,8 @@ Resources:
         "--dynamodbAnalysisTableName": "default"
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
+        "--redShiftSecretRegion": "default"
+        "--redShiftSecretName": "default"           
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
@@ -814,6 +820,8 @@ Resources:
         "--extra-jars": !Sub "s3://${pArtifactsBucket}/deequ/jars/deequ-1.0.3-RC1.jar"
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
+        "--redShiftSecretRegion": "default"
+        "--redShiftSecretName": "default"           
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
       Connections:
         Connections:
@@ -850,6 +858,7 @@ Resources:
       Timeout: 65
       Name: data-quality-anomoly-alert
       Role: !GetAtt rGlueJobsIAMRole.Arn
+      
   rGlueDataCatalog:
     Type: AWS::Glue::Database
     Properties:

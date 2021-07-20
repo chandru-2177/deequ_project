@@ -25,6 +25,12 @@ import org.slf4j.LoggerFactory
 
 import com.amazon.deequ.profiles.{ColumnProfilerRunner, NumericColumnProfile}
 
+import java.security.InvalidParameterException
+import java.util.Base64
+import com.amazonaws.services.secretsmanager._
+import com.amazonaws.services.secretsmanager.model._
+import scala.util.parsing.json.JSON
+
 object GlueApp {
 
   val sc: SparkContext = new SparkContext()
@@ -41,13 +47,17 @@ object GlueApp {
     val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME",
       "glueDatabase",
       "glueTables",
-      "targetBucketName").toArray)
+      "targetBucketName", 
+      "redshiftSecretRegion",
+      "redshiftSecretName").toArray)
 
     Job.init(args("JOB_NAME"), glueContext, args.asJava)
     val logger = LoggerFactory.getLogger(args("JOB_NAME"))
 
     val dbName = args("glueDatabase")
     val tabNames = args("glueTables").split(",").map(_.trim)
+    val secretRegion = args("redshiftSecretRegion")
+    val secretName = args("redshiftSecretName")
 
     logger.info("Starting Data profile Job...")
 
@@ -59,11 +69,20 @@ object GlueApp {
         transformationContext = "datasource0").getDynamicFrame().toDF()
         */
 
-        val dbTable = dbName + "." + tabName
-        val profiler_df = spark.read.format("jdbc")
-                .option("user", "admin")
-                .option("password", "Hyd_12345")
-                .option("url", "jdbc:redshift://cluster-deequ.cetpaowzh4v2.us-west-2.redshift.amazonaws.com:5439/dev")
+          //Connect to Secret Manager  
+          val client = AWSSecretsManagerClientBuilder.standard.withRegion(secretRegion).build
+          var secret: String = null
+          val getSecretValueRequest = new GetSecretValueRequest().withSecretId(secretName)
+          val getSecretValueResult = client.getSecretValue(getSecretValueRequest)
+          secret = getSecretValueResult.getSecretString 
+    
+          val (username, password,engine,host,port,dbname) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
+          val url = "jdbc:"+engine+"://"+host+":"+port+"/"dbname
+          val dbTable = glueDB + "." + glueTable
+          val profiler_df = spark.read.format("jdbc")
+                .option("user", username)
+                .option("password", password)
+                .option("url", url)
                 .option("dbtable", dbTable).load()
 
         val profileResult = ColumnProfilerRunner()

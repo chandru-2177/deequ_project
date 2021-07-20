@@ -55,6 +55,12 @@ import scala.reflect.runtime.currentMirror
 import scala.tools.reflect.ToolBox
 import java.io._
 
+import java.security.InvalidParameterException
+import java.util.Base64
+import com.amazonaws.services.secretsmanager._
+import com.amazonaws.services.secretsmanager.model._
+import scala.util.parsing.json.JSON
+
 object GlueApp {
 
   val sparkContext: SparkContext = new SparkContext()
@@ -81,7 +87,9 @@ object GlueApp {
         "glueDatabase",
         "glueTable",
         "targetBucketName",
-        "targetBucketPrefix").toArray)
+        "targetBucketPrefix", 
+        "redshiftSecretRegion",
+        "redshiftSecretName").toArray)
 
     Job.init(args("JOB_NAME"), glueContext, args.asJava)
     val logger = LoggerFactory.getLogger(args("JOB_NAME"))
@@ -97,7 +105,7 @@ object GlueApp {
     // Step3: Create Dataframe from GLUE tables to run the Verification result
     //***********************************************************************//
     //val glueTableDF: DataFrame = readGlueTablesToDF(args("glueDatabase"), args("glueTable"))
-    val glueTableDF: DataFrame = readRSTablesToDF(args("glueDatabase"), args("glueTable"))
+    val glueTableDF: DataFrame = readRSTablesToDF(args("glueDatabase"), args("glueTable"),args("redshiftSecretRegion"), args("redshiftSecretName"))
 
     //***********************************************************************//
     // Step4: Build validation code dataframe
@@ -172,14 +180,24 @@ object GlueApp {
 
   }
   */
-  def readRSTablesToDF(glueDB: String, glueTable: String): DataFrame = {
+  def readRSTablesToDF(glueDB: String, glueTable: String, redshiftSecretRegion: String, redshiftSecretName: String): DataFrame = {
 
+    //Connect to Secret Manager  
+    val client = AWSSecretsManagerClientBuilder.standard.withRegion(secretRegion).build
+    var secret: String = null
+    val getSecretValueRequest = new GetSecretValueRequest().withSecretId(secretName)
+    val getSecretValueResult = client.getSecretValue(getSecretValueRequest)
+    secret = getSecretValueResult.getSecretString 
+    
+    val (username, password,engine,host,port,dbname) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
+    val url = "jdbc:"+engine+"://"+host+":"+port+"/"dbname
     val dbTable = glueDB + "." + glueTable
     spark.read.format("jdbc")
-                .option("user", "admin")
-                .option("password", "Hyd_12345")
-                .option("url", "jdbc:redshift://cluster-deequ.cetpaowzh4v2.us-west-2.redshift.amazonaws.com:5439/dev")
+                .option("user", username)
+                .option("password", password)
+                .option("url", url)
                 .option("dbtable", dbTable).load()
+
 
   }
 

@@ -9,7 +9,11 @@ Parameters:
   pcodeBranch:
     Description: git branch i,e alphaline or mainline
     Type: String
-    Default: main    
+    Default: alphaline
+  pRedshiftSecretName:
+    Description: Secret name of Redshift that you are planning to run deequ-glue jobs. 
+    Type: String
+    Default: ''
 
 Resources:
   rCodeBuildServiceRole:
@@ -273,6 +277,12 @@ Resources:
           - Name: ENV
             Type: PLAINTEXT
             Value: !Ref pEnv
+          - Name: CODE-BRANCH
+            Type: PLAINTEXT
+            Value: !Ref pcodeBranch            
+          - Name: REDSHIFT-SECRET
+            Type: PLAINTEXT
+            Value: !Ref pRedshiftSecretName              
           - Name: REPO
             Type: PLAINTEXT
             Value: https://github.com/vijay75252/deequ_project
@@ -296,11 +306,11 @@ Resources:
                 - aws configure set aws_secret_access_key `jq -r '.SecretAccessKey' aws_credentials.json`
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
-                - git clone --single-branch --branch main $REPO
+                - git clone --single-branch --branch $CODE-BRANCH $REPO
                 - cd ./deequ_project/src/amazon-deequ-glue
                 - git config --global user.email "robot@example.com"
                 - git config --global user.name "robot"
-                - ./deploy.sh -e $ENV
+                - ./deploy.sh -e $ENV -b $REDSHIFT-SECRET
           artifacts:
             files:
               - '*'

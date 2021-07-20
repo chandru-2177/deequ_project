@@ -53,13 +53,19 @@ import java.util.Date
 import java.util.Properties
 import java.util.UUID.randomUUID
 
+import java.security.InvalidParameterException
+import java.util.Base64
+import com.amazonaws.services.secretsmanager._
+import com.amazonaws.services.secretsmanager.model._
+import scala.util.parsing.json.JSON
+
 object GlueApp {
   def main(sysArgs: Array[String]) {
     val sparkContext: SparkContext = new SparkContext()
     val glueContext: GlueContext = new GlueContext(sparkContext)
     val sqlContext = new SQLContext(sparkContext)
     val spark = glueContext.getSparkSession
-    val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME", "dynamodbSuggestionTableName", "dynamodbAnalysisTableName", "glueDatabase", "glueTables", "targetBucketName").toArray)
+    val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME", "dynamodbSuggestionTableName", "dynamodbAnalysisTableName", "glueDatabase", "glueTables", "redshiftSecretRegion","redshiftSecretName", "targetBucketName").toArray)
     Job.init(args("JOB_NAME"), glueContext, args.asJava)
     val logger = LoggerFactory.getLogger(args("JOB_NAME"))
 
@@ -71,6 +77,8 @@ object GlueApp {
     val getMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("MM"))
     val getDay = LocalDate.now().format(DateTimeFormatter.ofPattern("dd"))
     val getTimestamp = new SimpleDateFormat("HH-mm-ss").format(new Date)
+    val secretRegion = args("redshiftSecretRegion")
+    val secretName = args("redshiftSecretName")
 
     // Configure connection to DynamoDB
     var jobConf_add = new JobConf(spark.sparkContext.hadoopConfiguration)
@@ -84,14 +92,22 @@ object GlueApp {
       logger.info("Reading Source database: " + dbName + " and table: " + tabName)
 
       //val glueDF = glueContext.getCatalogSource(database = dbName, tableName = tabName, redshiftTmpDir = "", transformationContext = "dataset").getDynamicFrame().toDF()
-
-      val dbTable = dbName + "." + tabName
+    
+    //Connect to Secret Manager  
+      val client = AWSSecretsManagerClientBuilder.standard.withRegion(secretRegion).build
+      var secret: String = null
+      val getSecretValueRequest = new GetSecretValueRequest().withSecretId(secretName)
+      val getSecretValueResult = client.getSecretValue(getSecretValueRequest)
+      secret = getSecretValueResult.getSecretString 
+    
+      val (username, password,engine,host,port,dbname) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
+      val url = "jdbc:"+engine+"://"+host+":"+port+"/"dbname
+      val dbTable = glueDB + "." + glueTable
       val glueDF = spark.read.format("jdbc")
-                .option("user", "admin")
-                .option("password", "Hyd_12345")
-                .option("url", "jdbc:redshift://cluster-deequ.cetpaowzh4v2.us-west-2.redshift.amazonaws.com:5439/dev")
+                .option("user", username)
+                .option("password", password)
+                .option("url", url)
                 .option("dbtable", dbTable).load()
-
 
       logger.info("Running Constraint Suggestor for database: " + dbName + "and table: " + tabName)
 
