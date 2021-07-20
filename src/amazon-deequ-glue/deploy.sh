@@ -25,7 +25,7 @@ do
         p  ) pflag=true; PROFILE=$OPTARG;;
         r  ) rflag=true; REGION=$OPTARG;;
         e  ) eflag=true; ENV=$OPTARG;;
-        b  ) bflag=true; RS_SECRET_NAME=$OPTARG;;
+        b  ) bflag=true; REDSHIFTSECRET=$OPTARG;;
         d  ) dflag=true;;
         h  ) usage; exit;;
         \? ) echo "Unknown option: -$OPTARG" >&2; exit 1;;
@@ -35,7 +35,7 @@ do
 done
 
 echo "Here is the connection !!"
-echo $RS_SECRET_NAME
+echo $REDSHIFTSECRET
 
 if ! $pflag
 then
@@ -115,7 +115,7 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
       ParameterKey=pCreateFrontEnd,ParameterValue=$UI_FLAG \
       ParameterKey=pEnv,ParameterValue=$ENV \
       ParameterKey=Stage,ParameterValue=$ENV \
-      ParameterKey=pRedShiftSecretName,ParameterValue=$RS_SECRET_NAME \
+      ParameterKey=pRedShiftSecretName,ParameterValue=$REDSHIFTSECRET \
     --tags file://$DIRNAME/tags.json \
     --capabilities "CAPABILITY_NAMED_IAM" "CAPABILITY_AUTO_EXPAND"
 
