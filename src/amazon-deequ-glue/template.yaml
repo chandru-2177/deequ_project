@@ -677,7 +677,7 @@ Resources:
                 "Resource": "${lCrawler}",
                 "Comment": "Run Glue Crawler",
                 "ResultPath": "$.statusCode",
-                "Next": "Run Glue Crawler"
+                "Next": "Data Anomoly Alert"
               },
               "Data Anomoly Alert": {
                 "Type": "Task",
