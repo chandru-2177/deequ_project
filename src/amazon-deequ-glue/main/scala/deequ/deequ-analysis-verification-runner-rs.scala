@@ -226,12 +226,13 @@ object GlueApp {
           secret = getSecretValueResult.getSecretString 
     
           val (username, password,engine,host,port,dbname) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
-          val url = "jdbc:"+engine+"://"+host+":"+port+"/"dbname
+          val intPort = port.toInt.toString
+          val jdbcUrl = s"jdbc:${engine}://${host}:${intPort}/${dbname}"   
           val dbTable = glueDB + "." + glueTable
           spark.read.format("jdbc")
+                .option("url", jdbcUrl)          
                 .option("user", username)
                 .option("password", password)
-                .option("url", url)
                 .option("dbtable", dbTable).load()
   }
 
