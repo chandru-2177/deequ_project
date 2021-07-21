@@ -17,22 +17,20 @@ usage () { echo "
     -d -- Disable AWS Amplify Web UI
     -b -- Name of Redshift Secret
 "; }
-options=':n:p:r:e:dh:b'
-while getopts $options option
+
+
+while getopts e:b:n:p:r:d: flag
 do
-    case "$option" in
+    case "${flag}" in
         n  ) nflag=true; STACK_NAME=$OPTARG;;
         p  ) pflag=true; PROFILE=$OPTARG;;
         r  ) rflag=true; REGION=$OPTARG;;
         e  ) eflag=true; ENV=$OPTARG;;
         b  ) bflag=true; REDSHIFTSECRET=$OPTARG;;
         d  ) dflag=true;;
-        h  ) usage; exit;;
-        \? ) echo "Unknown option: -$OPTARG" >&2; exit 1;;
-        :  ) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
-        *  ) echo "Unimplemented option: -$OPTARG" >&2; exit 1;;
     esac
 done
+
 
 echo "Here is the connection !!"
 echo $REDSHIFTSECRET
