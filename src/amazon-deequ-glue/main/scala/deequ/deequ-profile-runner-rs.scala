@@ -76,10 +76,10 @@ object GlueApp {
           val getSecretValueResult = client.getSecretValue(getSecretValueRequest)
           secret = getSecretValueResult.getSecretString 
     
-          val (username, password,engine,host,port,dbname) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
+          val (username, password,engine,host,port,database) = JSON.parseFull(secret).collect{case map: Map[String, Any] => (map("username"), map("password"), map("engine"), map("host"), map("port"), map("dbname"))}.get
           val intPort = port.asInstanceOf[Double].toInt.toString
-          val jdbcUrl = s"jdbc:${engine}://${host}:${intPort}/${dbname}"          
-          val dbTable = glueDB + "." + glueTable
+          val jdbcUrl = s"jdbc:${engine}://${host}:${intPort}/${database}"          
+          val dbTable = dbName + "." + tabName
           val profiler_df = spark.read.format("jdbc")
                 .option("url", jdbcUrl.toString)          
                 .option("user", username.toString)
