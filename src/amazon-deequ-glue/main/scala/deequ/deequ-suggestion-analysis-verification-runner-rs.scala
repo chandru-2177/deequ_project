@@ -105,9 +105,9 @@ object GlueApp {
       val jdbcUrl = s"jdbc:${engine}://${host}:${intPort}/${dbname}"
       val dbTable = glueDB + "." + glueTable
       val glueDF = spark.read.format("jdbc")
-                .option("url", jdbcUrl)      
-                .option("user", username)
-                .option("password", password)
+                .option("url", jdbcUrl.toString)      
+                .option("user", username.toString)
+                .option("password", password.toString)
                 .option("dbtable", dbTable).load()
 
       logger.info("Running Constraint Suggestor for database: " + dbName + "and table: " + tabName)
