@@ -568,6 +568,7 @@ Resources:
                   - glue:GetJobRun*
                 Resource:
                   - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${rControllerGlueJob}
+                  - !Sub arn:aws:glue:${AWS::Region}:${AWS::AccountId}:job/${rAnomolyAlertGlueJob}                  
 
   rEventTriggerRole:
     Type: AWS::IAM::Role
