@@ -36,8 +36,8 @@ def sendEmail(recipients,panas_df):
     part1 = MIMEText(html, 'html')
     msg.attach(part1)
 
-    #server = smtplib.SMTP('mail-relay.amazon.com')
-    server = smtplib.SMTP('localhost')
+    server = smtplib.SMTP('mail-relay.amazon.com')
+    #server = smtplib.SMTP('localhost')
     server.sendmail(msg['From'], emaillist , msg.as_string())
     server.quit()
 #####
@@ -102,7 +102,7 @@ CASE WHEN latestbatch_runtime BETWEEN 0.8*COALESCE(past_5runs_avg,latestbatch_ru
 
 print("Checking if data frame empty or not")
 
-if not result_df.where("is_anomoly = 'N'").rdd.isEmpty():
+if not result_df.where("is_anomoly = 'Y'").rdd.isEmpty():
     print("Dataframe is not empty")
     logger.info("Found data anomolies;sending email alert")
     panas_df=result_df.where("is_anomoly = 'Y'").toPandas()
@@ -110,8 +110,4 @@ if not result_df.where("is_anomoly = 'N'").rdd.isEmpty():
     print("Calling sendemail method")
     sendEmail(recipients,panas_df)
     print("returned from email")
-    
-    
-
-
     

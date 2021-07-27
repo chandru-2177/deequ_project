@@ -307,9 +307,9 @@ Resources:
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
                 - git clone --single-branch --branch $CODEBRANCH $REPO
-                - cd ./deequ_project/src/amazon-deequ-glue
-                - git config --global user.email "robot@example.com"
-                - git config --global user.name "robot"
+                - cd ./deequ_project/src/wfs/amazon-deequ-glue
+                - git config --global user.email "annaldas@amazon.com"
+                - git config --global user.name "annaldas"
                 - ./deploy.sh -e $ENV -b $REDSHIFTSECRET
           artifacts:
             files:

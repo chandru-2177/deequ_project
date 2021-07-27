@@ -857,6 +857,7 @@ Resources:
         MaxConcurrentRuns: 10
       GlueVersion: "2.0"
       Timeout: 65
+      MaxCapacity: 3
       Name: data-quality-anomoly-alert
       Role: !GetAtt rGlueJobsIAMRole.Arn
       
