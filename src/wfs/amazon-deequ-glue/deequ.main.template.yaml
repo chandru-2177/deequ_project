@@ -287,7 +287,7 @@ Resources:
       TimeoutInMinutes: 30
       Source:
         Type: CODECOMMIT
-        Location: https://git-codecommit.${AWS::Region}.amazonaws.com/v1/deequ_project/
+        Location: https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/deequ_project/
         BuildSpec: |
           version: 0.2
           phases:
