@@ -14,10 +14,6 @@ Parameters:
     Description: Secret name of Redshift that you are planning to run deequ-glue jobs. 
     Type: String
     Default: ''
-  pRepo:
-    Description: Repositoy name created in codecommit 
-    Type: String
-    Default: ''
 Resources:
   rCodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -286,15 +282,12 @@ Resources:
           - Name: REDSHIFTSECRET
             Type: PLAINTEXT
             Value: !Ref pRedshiftSecretName              
-          - Name: REPO
-            Type: PLAINTEXT
-            Value: !Ref pRepo
             
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
       Source:
         Type: CODECOMMIT
-        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${REPO}"
+        Location: https://git-codecommit.${AWS::Region}.amazonaws.com/v1/deequ_project/
         BuildSpec: |
           version: 0.2
           phases:
