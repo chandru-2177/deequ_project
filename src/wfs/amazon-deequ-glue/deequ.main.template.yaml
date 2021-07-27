@@ -14,7 +14,10 @@ Parameters:
     Description: Secret name of Redshift that you are planning to run deequ-glue jobs. 
     Type: String
     Default: ''
-
+  pRepo:
+    Description: Repositoy name created in codecommit 
+    Type: String
+    Default: ''
 Resources:
   rCodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -285,12 +288,13 @@ Resources:
             Value: !Ref pRedshiftSecretName              
           - Name: REPO
             Type: PLAINTEXT
-            Value: https://github.com/vijay75252/deequ_project
+            Value: !Ref pRepo
             
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
       Source:
-        Type: NO_SOURCE
+        Type: CODECOMMIT
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${REPO}"
         BuildSpec: |
           version: 0.2
           phases:
@@ -306,7 +310,6 @@ Resources:
                 - aws configure set aws_secret_access_key `jq -r '.SecretAccessKey' aws_credentials.json`
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
-                - git clone --single-branch --branch $CODEBRANCH $REPO
                 - cd ./deequ_project/src/wfs/amazon-deequ-glue
                 - git config --global user.email "annaldas@amazon.com"
                 - git config --global user.name "annaldas"
