@@ -120,6 +120,10 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
   then
     echo "Starting initial Amplify job ..."
     APP_ID=$(sed -e 's/^"//' -e 's/"$//' <<<"$(aws ssm get-parameter --profile $PROFILE --region $REGION --name /DataQuality/Amplify/AppID --query "Parameter.Value")")
+    echo $APP_ID
+    echo $PROFILE
+    echo $REGION
+    echo $CODEBRANCH
     aws amplify start-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-type RELEASE
 
     until [ $(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-id 1 --query 'job.summary.status' --output text) = *"RUNNING"* ];
