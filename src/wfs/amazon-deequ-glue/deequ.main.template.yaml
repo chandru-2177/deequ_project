@@ -286,8 +286,7 @@ Resources:
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
       Source:
-        Type: CODECOMMIT
-        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/deequ_project"
+        Type: NO_SOURCE
         BuildSpec: |
           version: 0.2
           phases:
