@@ -22,7 +22,7 @@ usage () { echo "
 "; }
 
 
-while getopts e:b:n:p:r:d: flag
+while getopts e:b:n:p:r:d:c: flag
 do
     case "${flag}" in
         n  ) nflag=true; STACK_NAME=$OPTARG;;
