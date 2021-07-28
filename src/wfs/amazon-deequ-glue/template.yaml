@@ -221,7 +221,7 @@ Resources:
     Type: AWS::Amplify::Branch
     Condition: EnableFrontEnd
     Properties:
-      BranchName: !Ref pCodeBranch
+      BranchName: !Ref pEnv
       AppId: !GetAtt AmplifyApp.AppId
       EnableAutoBuild: yes
 
@@ -406,7 +406,7 @@ Resources:
                   - codecommit:GetRepositoryTriggers
                   - codecommit:PutRepositoryTriggers
               - Resource:
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pCodeBranch}/AppSync/GraphQLApi"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
                 Effect: Allow
                 Action:
                   - ssm:AddTagsToResource
@@ -850,7 +850,6 @@ Resources:
       DefaultArguments:
         "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
         "--enable-metrics": "true"
-        "--env": !Ref pEnv
         "--glueDatabase": "default"
         "--glueTables": "table1,table2"
         "--targetBucketName": !Sub "s3://${rDataQualityBucket}"
