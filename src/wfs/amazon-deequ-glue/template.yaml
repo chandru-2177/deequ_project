@@ -645,7 +645,7 @@ Resources:
   rGlueCrawlerLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./src/wfs/amazon-deequ-glue/main/utils/crawl-data/src
+      CodeUri: ./main/utils/crawl-data/src
       FunctionName: data-quality-crawl-data
       Description: Glue crawler
       Environment:
