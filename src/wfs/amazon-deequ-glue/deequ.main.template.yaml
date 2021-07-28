@@ -286,7 +286,8 @@ Resources:
       ServiceRole: !GetAtt rCodeBuildServiceRole.Arn
       TimeoutInMinutes: 30
       Source:
-        Type: NO_SOURCE
+        Type: CODECOMMIT
+        Location: !Sub "https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/deequ_project"
         BuildSpec: |
           version: 0.2
           phases:
@@ -302,6 +303,7 @@ Resources:
                 - aws configure set aws_secret_access_key `jq -r '.SecretAccessKey' aws_credentials.json`
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
+                - pip install --upgrade awscli git-remote-codecommit
                 - git clone codecommit://deequ_project local_deequ_project
                 - cd ./local_deequ_project/src/wfs/amazon-deequ-glue
                 - git config --global user.email "annaldas@amazon.com"
