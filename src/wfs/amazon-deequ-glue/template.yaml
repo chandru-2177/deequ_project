@@ -721,7 +721,7 @@ Resources:
       DefaultArguments:
         "--TempDir": !Sub "s3://${pArtifactsBucket}/deequ/"
         "--enable-metrics": "true"
-        "--env": !Ref pEnv
+        "--env": !Ref pCodeBranch
         "--glueSuggestionVerificationJob": !Ref rSuggestionVerificationRunnerGlueJob
         "--glueVerificationJob": !Ref rVerificationRunnerGlueJob
         "--glueProfilerJob": !Ref rProfilerRunnerGlueJob
