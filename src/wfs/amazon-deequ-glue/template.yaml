@@ -19,6 +19,10 @@ Parameters:
     Description: The environment name
     Type: String
     Default: ''
+  pCodeBranch:
+    Description: The environment name
+    Type: String
+    Default: ''
   Stage: 
     Type: String
     Default: ''
@@ -217,7 +221,7 @@ Resources:
     Type: AWS::Amplify::Branch
     Condition: EnableFrontEnd
     Properties:
-      BranchName: !Ref pEnv
+      BranchName: !Ref pCodeBranch
       AppId: !GetAtt AmplifyApp.AppId
       EnableAutoBuild: yes
 
