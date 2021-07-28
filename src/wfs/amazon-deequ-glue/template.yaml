@@ -406,7 +406,7 @@ Resources:
                   - codecommit:GetRepositoryTriggers
                   - codecommit:PutRepositoryTriggers
               - Resource:
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pCodeBranch}/AppSync/GraphQLApi"
                 Effect: Allow
                 Action:
                   - ssm:AddTagsToResource
@@ -516,7 +516,7 @@ Resources:
                   - ssm:GetParameter
                   - ssm:GetParameters
                 Resource:
-                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pEnv}/AppSync/GraphQLApi"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/DataQuality/${pCodeBranch}/AppSync/GraphQLApi"
               - Resource: "*"
                 Effect: Allow
                 Action:                

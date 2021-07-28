@@ -304,7 +304,7 @@ Resources:
                 - aws configure set aws_session_token `jq -r '.Token' aws_credentials.json`
                 - aws configure set default.region $AWS_REGION
                 - pip install --upgrade awscli git-remote-codecommit
-                - git clone codecommit://deequ_project local_deequ_project --single-branch --branch main
+                - git clone codecommit://deequ_project local_deequ_project --single-branch --branch $CODEBRANCH
                 - cd ./local_deequ_project/src/wfs/amazon-deequ-glue
                 - git config --global user.email "annaldas@amazon.com"
                 - git config --global user.name "annaldas"
