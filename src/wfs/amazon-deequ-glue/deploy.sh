@@ -5,6 +5,7 @@ rflag=false
 eflag=false
 dflag=false
 bflag=false
+cflag=false
 
 DIRNAME=$(pwd)
 
@@ -16,6 +17,8 @@ usage () { echo "
     -e -- Name of the environment
     -d -- Disable AWS Amplify Web UI
     -b -- Name of Redshift Secret
+    -c -- Code repo branch
+
 "; }
 
 
@@ -27,6 +30,7 @@ do
         r  ) rflag=true; REGION=$OPTARG;;
         e  ) eflag=true; ENV=$OPTARG;;
         b  ) bflag=true; REDSHIFTSECRET=$OPTARG;;
+        c  ) cflag=true; CODEBRANCH=$OPTARG;;
         d  ) dflag=true;;
     esac
 done
@@ -116,15 +120,15 @@ if ! aws cloudformation describe-stacks --profile $PROFILE  --region $REGION --s
   then
     echo "Starting initial Amplify job ..."
     APP_ID=$(sed -e 's/^"//' -e 's/"$//' <<<"$(aws ssm get-parameter --profile $PROFILE --region $REGION --name /DataQuality/Amplify/AppID --query "Parameter.Value")")
-    aws amplify start-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $ENV --job-type RELEASE
+    aws amplify start-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-type RELEASE
 
-    until [ $(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $ENV --job-id 1 --query 'job.summary.status' --output text) = *"RUNNING"* ];
+    until [ $(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-id 1 --query 'job.summary.status' --output text) = *"RUNNING"* ];
     do
       echo "Amplify console job is running......"
       sleep 60s
-      if [ $(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $ENV --job-id 1 --query 'job.summary.status' --output text) != "RUNNING" ]; then
+      if [ $(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-id 1 --query 'job.summary.status' --output text) != "RUNNING" ]; then
         echo "Amplify console job Finished"
-        status=$(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $ENV --job-id 1 --query 'job.summary.status' --output text)
+        status=$(aws amplify get-job --profile $PROFILE --region $REGION --app-id $APP_ID --branch-name $CODEBRANCH --job-id 1 --query 'job.summary.status' --output text)
         if [ "$status" == "SUCCEED" ]
         then
             echo "JOB $status"

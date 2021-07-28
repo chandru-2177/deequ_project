@@ -308,7 +308,7 @@ Resources:
                 - cd ./local_deequ_project/src/wfs/amazon-deequ-glue
                 - git config --global user.email "annaldas@amazon.com"
                 - git config --global user.name "annaldas"
-                - ./deploy.sh -e $ENV -b $REDSHIFTSECRET
+                - ./deploy.sh -e $ENV -b $REDSHIFTSECRET -c $CODEBRANCH
           artifacts:
             files:
               - '*'
