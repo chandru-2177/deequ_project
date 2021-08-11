@@ -331,7 +331,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
               - Resource:
-                  - !Sub "arn:aws:s3://${rDeequSourceDataBucket}"  
+                  - !Sub "arn:aws:s3::://${rDeequSourceDataBucket}"  
                 Effect: Allow
                 Action:
                   - s3:GetObject
