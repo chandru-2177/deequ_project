@@ -58,6 +58,7 @@ object GlueApp {
     val tabNames = args("glueTables").split(",").map(_.trim)
     val secretRegion = args("redshiftSecretRegion")
     val secretName = args("redshiftSecretName")
+    val sourceDataBucketName = args("sourceDataBucketName")
 
     logger.info("Starting Data profile Job...")
 
@@ -69,6 +70,7 @@ object GlueApp {
         transformationContext = "datasource0").getDynamicFrame().toDF()
         */
 
+        /*
           //Connect to Secret Manager  
           val client = AWSSecretsManagerClientBuilder.standard.withRegion(secretRegion).build
           var secret: String = null
@@ -85,7 +87,9 @@ object GlueApp {
                 .option("user", username.toString)
                 .option("password", password.toString)
                 .option("dbtable", dbTable.toString).load()
-
+        */
+        val tabName_mod = tabName.replace('_','-')
+        val glueTableDF: DataFrame = spark.read.option("header",true).csv(s"s3://${sourceDataBucketName}/${tabName_mod}")
         val profileResult = ColumnProfilerRunner()
         .onData(profiler_df)
         .run()

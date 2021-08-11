@@ -114,6 +114,7 @@ object GlueApp {
     var analysisDataFrame: Seq[DataFrame] = Seq(spark.createDataFrame(spark.sparkContext.emptyRDD[Row], StructType(Seq())))
     val secretRegion = args("redshiftSecretRegion")
     val secretName = args("redshiftSecretName")
+    val sourceDataBucketName = args("sourceDataBucketName")
 
     logger.info("Start Job")
     for (tabName <- tabNames) {
@@ -126,7 +127,9 @@ object GlueApp {
       // Step3: Create Dataframe from GLUE tables to run the Verification result
       //***********************************************************************//
       //val glueTableDF: DataFrame = readGlueTablesToDF(dbName, tabName)
-      val glueTableDF: DataFrame = readRSTablesToDF(dbName, tabName, secretRegion, secretName)
+      //val glueTableDF: DataFrame = readRSTablesToDF(dbName, tabName, secretRegion, secretName)
+      val tabName_mod = tabName.replace('_','-')
+      val glueTableDF: DataFrame = spark.read.option("header",true).csv(s"s3://${sourceDataBucketName}/${tabName_mod}")
 
       //***********************************************************************//
       // Step4: Build validation code dataframe

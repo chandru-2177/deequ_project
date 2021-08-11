@@ -79,6 +79,7 @@ object GlueApp {
     val getTimestamp = new SimpleDateFormat("HH-mm-ss").format(new Date)
     val secretRegion = args("redshiftSecretRegion")
     val secretName = args("redshiftSecretName")
+    val sourceDataBucketName = args("sourceDataBucketName")
 
     // Configure connection to DynamoDB
     var jobConf_add = new JobConf(spark.sparkContext.hadoopConfiguration)
@@ -91,8 +92,8 @@ object GlueApp {
     for (tabName <- tabNames) {
       logger.info("Reading Source database: " + dbName + " and table: " + tabName)
 
-      //val glueDF = glueContext.getCatalogSource(database = dbName, tableName = tabName, redshiftTmpDir = "", transformationContext = "dataset").getDynamicFrame().toDF()
-    
+    /*
+    //val glueDF = glueContext.getCatalogSource(database = dbName, tableName = tabName, redshiftTmpDir = "", transformationContext = "dataset").getDynamicFrame().toDF()  
     //Connect to Secret Manager  
       val client = AWSSecretsManagerClientBuilder.standard.withRegion(secretRegion).build
       var secret: String = null
@@ -109,6 +110,9 @@ object GlueApp {
                 .option("user", username.toString)
                 .option("password", password.toString)
                 .option("dbtable", dbTable.toString).load()
+      */
+      val tabName_mod = tabName.replace('_','-')
+      val glueDF = spark.read.option("header",true).csv(s"s3://${sourceDataBucketName}/${tabName_mod}")
 
       logger.info("Running Constraint Suggestor for database: " + dbName + "and table: " + tabName)
 

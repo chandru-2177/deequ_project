@@ -3,11 +3,14 @@
 import sys
 import time
 import logging
-
+import pg
+import json
+import base64
 from botocore.exceptions import ClientError
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from awsglue.utils import getResolvedOptions
+
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -53,6 +56,54 @@ def testGlueJob(jobId, count, sec, jobName):
         if i == count:
             return 0
 
+##Get redshift secrets
+def get_secretValue(secret_name,region_name):
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name)
+
+    # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
+    # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+    # We rethrow the exception by default.
+
+    try:
+        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+        secretString = get_secret_value_response.get('SecretString')
+        print(secretString)
+        jsonSecret = json.loads(secretString)
+        return jsonSecret['dbname'],jsonSecret['host'],jsonSecret['port'],jsonSecret['username'],jsonSecret['password']
+    
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'DecryptionFailureException':
+            # Secrets Manager can't decrypt the protected secret text using the provided KMS key.
+            # Deal with the exception here, and/or rethrow at your discretion.
+            raise e
+        elif e.response['Error']['Code'] == 'InternalServiceErrorException':
+            # An error occurred on the server side.
+            # Deal with the exception here, and/or rethrow at your discretion.
+            raise e
+        elif e.response['Error']['Code'] == 'InvalidParameterException':
+            # You provided an invalid value for a parameter.
+            # Deal with the exception here, and/or rethrow at your discretion.
+            raise e
+        elif e.response['Error']['Code'] == 'InvalidRequestException':
+            # You provided a parameter value that is not valid for the current state of the resource.
+            # Deal with the exception here, and/or rethrow at your discretion.
+            raise e
+        elif e.response['Error']['Code'] == 'ResourceNotFoundException':
+            # We can't find the resource that you asked for.
+            # Deal with the exception here, and/or rethrow at your discretion.
+            raise e
+    else:
+        # Decrypts secret using the associated KMS CMK.
+        # Depending on whether the secret is a string or binary, one of these fields will be populated.
+        if 'SecretString' in get_secret_value_response:
+            secret = get_secret_value_response['SecretString']
+        else:
+            decoded_binary_secret = base64.b64decode(get_secret_value_response['SecretBinary'])
+
 
 # Required Parameters
 args = getResolvedOptions(sys.argv, [
@@ -76,6 +127,33 @@ glue_database = args['glueDatabase']
 glue_tables = [x.strip() for x in args['glueTables'].split(',')]
 redShiftSecretRegion = args['redShiftSecretRegion']
 redShiftSecretName = args['redShiftSecretName']
+sourceDataBucket = args['sourceDataBucketName']
+redshiftUnloadRole = args['redshiftUnloadRole']
+awsAccountId = args['awsAccountId']
+
+if not glue_tables:
+    print("Please pass valid source tables")
+    exit(0)
+
+#Fetch redshift credentials using secret manager API
+dbname,host,port,username,password =get_secretValue(redShiftSecretName,redShiftSecretRegion)
+
+##Connect to redshift and unload to S3
+con=pg.connect(dbname=dbname,host=host,port=int(port),user=str(username),passwd=str(password))
+for table in glue_tables:
+    print(table)
+    table_mod=table.replace('_','-')
+    print("DB Connection established successfully")
+    resultset=con.query("""unload ('select * from {0}.{1}')
+            to 's3://{3}/{2}/' 
+            iam_role 'arn:aws:iam::{4}:role/{5}'
+            parallel off
+            maxfilesize 256 mb
+            CSV
+            CLEANPATH;""".format(glue_database,table,table_mod,sourceDataBucket,awsAccountId,redshiftUnloadRole))
+    print("DB Unload completed")
+con.close()
+print("DB Connection closed successfully")
 
 # Determine which tables had Deequ data quality suggestions set up already
 suggestions_tables = []
