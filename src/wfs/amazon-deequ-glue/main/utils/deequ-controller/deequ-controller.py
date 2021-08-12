@@ -114,7 +114,10 @@ args = getResolvedOptions(sys.argv, [
     'glueDatabase',
     'glueTables',
     'redShiftSecretRegion',
-    'redShiftSecretName'])
+    'redShiftSecretName',
+    'sourceDataBucketName',
+    'redshiftUnloadRole',
+    'awsAccountId'])    
 
 env = args['env']
 table_suffix = get_table_suffix(env)
@@ -145,7 +148,7 @@ for table in glue_tables:
     table_mod=table.replace('_','-')
     print("DB Connection established successfully")
     resultset=con.query("""unload ('select * from {0}.{1}')
-            to 's3://{3}/{2}/' 
+            to '{3}/{2}/' 
             iam_role 'arn:aws:iam::{4}:role/{5}'
             parallel off
             maxfilesize 256 mb

@@ -49,7 +49,8 @@ object GlueApp {
       "glueTables",
       "targetBucketName", 
       "redshiftSecretRegion",
-      "redshiftSecretName").toArray)
+      "redshiftSecretName",
+      "sourceDataBucketName").toArray)
 
     Job.init(args("JOB_NAME"), glueContext, args.asJava)
     val logger = LoggerFactory.getLogger(args("JOB_NAME"))
@@ -89,7 +90,7 @@ object GlueApp {
                 .option("dbtable", dbTable.toString).load()
         */
         val tabName_mod = tabName.replace('_','-')
-        val glueTableDF: DataFrame = spark.read.option("header",true).csv(s"s3://${sourceDataBucketName}/${tabName_mod}")
+        val glueTableDF: DataFrame = spark.read.option("header",true).csv(s"${sourceDataBucketName}/${tabName_mod}")
         val profileResult = ColumnProfilerRunner()
         .onData(profiler_df)
         .run()

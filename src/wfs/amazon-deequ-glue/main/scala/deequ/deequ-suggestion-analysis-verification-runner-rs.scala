@@ -65,7 +65,7 @@ object GlueApp {
     val glueContext: GlueContext = new GlueContext(sparkContext)
     val sqlContext = new SQLContext(sparkContext)
     val spark = glueContext.getSparkSession
-    val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME", "dynamodbSuggestionTableName", "dynamodbAnalysisTableName", "glueDatabase", "glueTables", "redshiftSecretRegion","redshiftSecretName", "targetBucketName").toArray)
+    val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME", "dynamodbSuggestionTableName", "dynamodbAnalysisTableName", "glueDatabase", "glueTables", "redshiftSecretRegion","redshiftSecretName", "targetBucketName","sourceDataBucketName").toArray)
     Job.init(args("JOB_NAME"), glueContext, args.asJava)
     val logger = LoggerFactory.getLogger(args("JOB_NAME"))
 
@@ -112,7 +112,7 @@ object GlueApp {
                 .option("dbtable", dbTable.toString).load()
       */
       val tabName_mod = tabName.replace('_','-')
-      val glueDF = spark.read.option("header",true).csv(s"s3://${sourceDataBucketName}/${tabName_mod}")
+      val glueDF = spark.read.option("header",true).csv(s"${sourceDataBucketName}/${tabName_mod}")
 
       logger.info("Running Constraint Suggestor for database: " + dbName + "and table: " + tabName)
 
