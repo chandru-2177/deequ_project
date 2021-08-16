@@ -90,7 +90,7 @@ object GlueApp {
                 .option("dbtable", dbTable.toString).load()
         */
         val tabName_mod = tabName.replace('_','-')
-        val glueTableDF: DataFrame = spark.read.option("header",true).csv(s"${sourceDataBucketName}/${tabName_mod}")
+        val profiler_df: DataFrame = spark.read.option("header",true).csv(s"${sourceDataBucketName}/${tabName_mod}")
         val profileResult = ColumnProfilerRunner()
         .onData(profiler_df)
         .run()
