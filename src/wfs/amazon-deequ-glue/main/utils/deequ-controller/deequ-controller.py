@@ -153,6 +153,7 @@ for table in glue_tables:
             parallel off
             maxfilesize 256 mb
             CSV
+            HEADER
             CLEANPATH;""".format(glue_database,table,table_mod,sourceDataBucket,awsAccountId,redshiftUnloadRole))
     print("DB Unload completed")
 con.close()
