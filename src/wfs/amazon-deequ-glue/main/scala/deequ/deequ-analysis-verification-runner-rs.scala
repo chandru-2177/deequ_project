@@ -118,7 +118,19 @@ object GlueApp {
     val sourceDataBucketName = args("sourceDataBucketName")
 
     logger.info("Start Job")
-    for (tabName <- tabNames) {
+    
+    val j = tabNames.par
+    // Using all left cpu cores exception OS thread
+    val cpuCores = Runtime.getRuntime.availableProcessors()
+    println(s"Number of CPU's- ${cpuCores}")
+    val forkNum = if(cpuCores > 2) cpuCores - 1 else 1
+    //val forkNum = 10
+    j.tasksupport = new scala.collection.parallel.ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(forkNum))
+    
+    
+    //for (tabName <- tabNames) {
+    j.map { tabName => {
+
       //***********************************************************************//
       // Step2: Extracting suggestions from DynamoDB using input GLUE table
       //***********************************************************************//
@@ -167,7 +179,8 @@ object GlueApp {
         }
       }
     }
-
+    }
+    
     logger.info("Stop Job")
     Job.commit()
   }
