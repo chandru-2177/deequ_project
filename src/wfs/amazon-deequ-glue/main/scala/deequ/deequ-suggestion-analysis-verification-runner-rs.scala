@@ -89,7 +89,17 @@ object GlueApp {
     import spark.implicits._
 
     logger.info("Start Job")
-    for (tabName <- tabNames) {
+    
+    val j = tabNames.par
+    // Using all left cpu cores exception OS thread
+    val cpuCores = Runtime.getRuntime.availableProcessors()
+    println(s"Number of CPU's- ${cpuCores}")
+    val forkNum = if(cpuCores > 2) cpuCores - 1 else 1
+    j.tasksupport = new scala.collection.parallel.ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(forkNum))
+    
+    
+    //for (tabName <- tabNames) {
+    j.map { tabName => {
       logger.info("Reading Source database: " + dbName + " and table: " + tabName)
 
     /*
@@ -158,7 +168,7 @@ object GlueApp {
       verificationRunner(glueDF, allConstraints, dbName, tabName, getYear, getMonth, getDay, getTimestamp)
       analysisRunner(glueDF, allConstraints, dbName, tabName, getYear, getMonth, getDay, getTimestamp)
     }
-
+    }
     logger.info("Stop Job")
     Job.commit()
 
