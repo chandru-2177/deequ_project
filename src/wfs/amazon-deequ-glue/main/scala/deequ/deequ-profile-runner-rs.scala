@@ -30,6 +30,7 @@ import java.util.Base64
 import com.amazonaws.services.secretsmanager._
 import com.amazonaws.services.secretsmanager.model._
 import scala.util.parsing.json.JSON
+import java.time
 
 object GlueApp {
 
@@ -63,7 +64,17 @@ object GlueApp {
 
     logger.info("Starting Data profile Job...")
 
-    for (tabName <- tabNames) {
+    val j = tabNames.par
+    // Using all left cpu cores exception OS thread
+    val cpuCores = Runtime.getRuntime.availableProcessors()
+    println(s"Number of CPU's- ${cpuCores}")
+    //val forkNum = 10
+    val forkNum = if(cpuCores > 2) cpuCores - 1 else 1
+    j.tasksupport = new scala.collection.parallel.ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(forkNum))
+    
+    
+    //for (tabName <- tabNames) {
+    j.map { tabName => {
         /***
         val profiler_df = glueContext.getCatalogSource(database = dbName,
         tableName = tabName,
@@ -89,12 +100,32 @@ object GlueApp {
                 .option("password", password.toString)
                 .option("dbtable", dbTable.toString).load()
         */
+        
+        
+        val a: String = time.LocalDateTime.now().toString
+        println("Reading source csv-Start: ")
+        println(a)
+
         val tabName_mod = tabName.replace('_','-')
         val profiler_df: DataFrame = spark.read.option("header",true).csv(s"${sourceDataBucketName}/${tabName_mod}")
+        val b: String = time.LocalDateTime.now().toString
+        println("Reading source csv-End: ")
+        println(b)
+        println("-------")
+        
+        println("profileResult -Start: ")
+        println(time.LocalDateTime.now().toString)
+        
         val profileResult = ColumnProfilerRunner()
         .onData(profiler_df)
         .run()
 
+        println("profileResult -End: ")
+        println(time.LocalDateTime.now().toString)
+        println("-------")
+
+        println("profileResultDataset -Start: ")
+        println(time.LocalDateTime.now().toString)
         val profileResultDataset = profileResult.profiles.map {
         case (productName, profile) => (
             productName,
@@ -103,6 +134,10 @@ object GlueApp {
             profile.approximateNumDistinctValues)
         }.toSeq.toDS
 
+        println("profileResultDataset -End: ")
+        println(time.LocalDateTime.now().toString)
+        println("-------")
+        
         val finalDataset = profileResultDataset
             .withColumnRenamed("_1", "column")
             .withColumnRenamed("_2", "completeness")
@@ -111,6 +146,7 @@ object GlueApp {
             .withColumn("timestamp", lit(current_timestamp()))
 
         writeDStoS3(finalDataset, args("targetBucketName"), "profile-results", dbName, tabName, getYear, getMonth, getDay, getTimestamp)
+    }
     }
     logger.info("Stop Job")
 
